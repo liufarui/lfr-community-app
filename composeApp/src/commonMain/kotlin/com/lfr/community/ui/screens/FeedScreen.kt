@@ -12,6 +12,7 @@ import com.lfr.community.data.model.Member
 import com.lfr.community.data.model.Message
 import com.lfr.community.data.repository.CommunityRepository
 import com.lfr.community.ui.components.MessageBubble
+import com.lfr.community.ui.components.MockDataBanner
 import kotlinx.coroutines.launch
 
 @Composable
@@ -31,6 +32,7 @@ fun FeedScreen(repository: CommunityRepository) {
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
+        MockDataBanner(repository.isUsingMock)
         Text(
             "广场",
             style = MaterialTheme.typography.headlineSmall,

@@ -17,6 +17,7 @@ import com.lfr.community.data.model.GroupChat
 import com.lfr.community.data.model.Member
 import com.lfr.community.data.repository.CommunityRepository
 import com.lfr.community.ui.components.CreateChatDialog
+import com.lfr.community.ui.components.MockDataBanner
 import kotlinx.coroutines.launch
 
 @Composable
@@ -36,6 +37,7 @@ fun ChatListScreen(repository: CommunityRepository, navController: NavController
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
+        MockDataBanner(repository.isUsingMock)
         Row(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
