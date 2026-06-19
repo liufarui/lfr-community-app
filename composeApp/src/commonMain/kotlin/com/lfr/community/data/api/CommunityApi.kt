@@ -1,45 +1,78 @@
 package com.lfr.community.data.api
 
+import com.lfr.community.data.auth.*
 import com.lfr.community.data.model.*
 import io.ktor.client.*
 import io.ktor.client.call.*
+import io.ktor.client.plugins.auth.*
+import io.ktor.client.plugins.auth.providers.*
 import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.client.plugins.defaultRequest
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
-class CommunityApi(baseUrl: String = "http://127.0.0.1:3001/api") {
+class CommunityApi(
+    baseUrl: String = "https://liufarui.top/community-api",
+    private val tokenStore: TokenStore = InMemoryTokenStore(),
+) {
     var apiBase: String = baseUrl
         private set
 
-    private val json = Json { ignoreUnknownKeys = true; isLenient = true }
+    private val json = Json {
+        ignoreUnknownKeys = true
+        isLenient = true
+        coerceInputValues = true
+    }
 
-    private val client = HttpClient {
+    val client: HttpClient = HttpClient {
         install(ContentNegotiation) {
             json(json)
         }
+
+        install(Auth) {
+            bearer {
+                loadTokens {
+                    tokenStore.load()?.let { BearerTokens(it, "") }
+                }
+                refreshTokens {
+                    throw NotImplementedError("refreshToken 后端暂未实现，需重新 login")
+                }
+                sendWithoutRequest { true }
+            }
+        }
+
+        defaultRequest {
+            url(apiBase)
+        }
     }
+
+    val auth = AuthApi(client, tokenStore)
+    val topics = TopicsApi(client)
+    val agents = AgentsApi(client)
+    val threads = ThreadsApi(client)
 
     fun updateBaseUrl(url: String) {
         apiBase = url.trimEnd('/')
     }
 
     suspend fun fetchMembers(): List<Member> =
-        client.get("$apiBase/members-parsed").body()
+        client.get("/api/members-parsed").body()
 
     suspend fun fetchMessages(limit: Int = 50): List<Message> {
-        val dateDirs: List<String> = client.get("$apiBase/data/messages").body()
+        val dateDirs: List<String> = client.get("/api/data/messages").body()
         val sorted = dateDirs.filter { it.matches(Regex("\\d{4}-\\d{2}-\\d{2}")) }.sortedDescending()
         val messages = mutableListOf<Message>()
         for (dateDir in sorted) {
             if (messages.size >= limit) break
             try {
-                val files: List<String> = client.get("$apiBase/data/messages/$dateDir").body()
+                val files: List<String> = client.get("/api/data/messages/$dateDir").body()
                 val jsonlFiles = files.filter { it.endsWith(".jsonl") }.sortedDescending()
                 for (f in jsonlFiles) {
-                    val batch: List<Message> = client.get("$apiBase/data/messages/$dateDir/$f").body()
+                    val batch: List<Message> = client.get("/api/data/messages/$dateDir/$f").body()
                     messages.addAll(batch)
                     if (messages.size >= limit) break
                 }
@@ -49,16 +82,16 @@ class CommunityApi(baseUrl: String = "http://127.0.0.1:3001/api") {
     }
 
     suspend fun fetchGroupChats(): List<GroupChat> =
-        client.get("$apiBase/group-chats").body()
+        client.get("/api/group-chats").body()
 
     suspend fun createGroupChat(name: String, emoji: String, members: List<String>): GroupChat =
-        client.post("$apiBase/group-chats/create") {
+        client.post("/api/group-chats/create") {
             contentType(ContentType.Application.Json)
             setBody(mapOf("name" to name, "emoji" to emoji, "members" to members))
         }.body()
 
     suspend fun updateGroupChat(chatId: String, name: String?, emoji: String?): GroupChat =
-        client.put("$apiBase/group-chats/$chatId") {
+        client.put("/api/group-chats/$chatId") {
             contentType(ContentType.Application.Json)
             val body = mutableMapOf<String, String>()
             name?.let { body["name"] = it }
@@ -67,20 +100,23 @@ class CommunityApi(baseUrl: String = "http://127.0.0.1:3001/api") {
         }.body()
 
     suspend fun addGroupChatMembers(chatId: String, members: List<String>): GroupChat =
-        client.post("$apiBase/group-chats/$chatId/members") {
+        client.post("/api/group-chats/$chatId/members") {
             contentType(ContentType.Application.Json)
             setBody(mapOf("members" to members))
         }.body()
 
     suspend fun removeGroupChatMember(chatId: String, memberId: String): GroupChat =
-        client.delete("$apiBase/group-chats/$chatId/members/$memberId").body()
+        client.delete("/api/group-chats/$chatId/members/$memberId").body()
 
     suspend fun fetchGroupChatMessages(chatId: String): List<Message> =
-        client.get("$apiBase/group-chats/$chatId/messages").body()
+        client.get("/api/group-chats/$chatId/messages").body()
 
-    suspend fun postGroupChatMessage(chatId: String, content: String): HttpResponse =
-        client.post("$apiBase/group-chats/$chatId/post") {
+    suspend fun postGroupChatMessage(chatId: String, content: String): Message =
+        client.post("/api/group-chats/$chatId/post") {
             contentType(ContentType.Application.Json)
             setBody(mapOf("content" to content))
-        }
+        }.body<PostMessageResponse>().message
 }
+
+@Serializable
+data class PostMessageResponse(val ok: Boolean, val message: Message)
