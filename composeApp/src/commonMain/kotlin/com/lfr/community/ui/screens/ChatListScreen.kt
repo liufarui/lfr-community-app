@@ -29,9 +29,12 @@ fun ChatListScreen(repository: CommunityRepository, navController: NavController
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
-        scope.launch {
+        try {
             chats = repository.getGroupChats()
             members = repository.getMembers().associateBy { it.id }
+        } catch (_: Exception) {
+            // Repository 已处理异常
+        } finally {
             loading = false
         }
     }

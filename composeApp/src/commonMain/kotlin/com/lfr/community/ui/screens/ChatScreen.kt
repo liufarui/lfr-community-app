@@ -29,13 +29,11 @@ fun ChatScreen(repository: CommunityRepository, chatId: String, navController: N
     val listState = rememberLazyListState()
 
     LaunchedEffect(chatId) {
-        scope.launch {
-            val chats = repository.getGroupChats()
-            chat = chats.find { it.id == chatId }
-            messages = repository.getChatMessages(chatId)
-            members = repository.getMembers().associateBy { it.id }
-            if (messages.isNotEmpty()) listState.animateScrollToItem(messages.lastIndex)
-        }
+        val chats = repository.getGroupChats()
+        chat = chats.find { it.id == chatId }
+        messages = repository.getChatMessages(chatId)
+        members = repository.getMembers().associateBy { it.id }
+        if (messages.isNotEmpty()) listState.animateScrollToItem(messages.lastIndex)
     }
 
     Scaffold(
@@ -81,11 +79,16 @@ fun ChatScreen(repository: CommunityRepository, chatId: String, navController: N
                         if (inputText.isNotBlank() && !sending) {
                             sending = true
                             scope.launch {
-                                repository.sendChatMessage(chatId, inputText.trim())
-                                inputText = ""
-                                messages = repository.getChatMessages(chatId)
-                                sending = false
-                                if (messages.isNotEmpty()) listState.animateScrollToItem(messages.lastIndex)
+                                try {
+                                    repository.sendChatMessage(chatId, inputText.trim())
+                                    inputText = ""
+                                    messages = repository.getChatMessages(chatId)
+                                    if (messages.isNotEmpty()) listState.animateScrollToItem(messages.lastIndex)
+                                } catch (_: Exception) {
+                                    // 发送失败时保持输入框内容
+                                } finally {
+                                    sending = false
+                                }
                             }
                         }
                     },
