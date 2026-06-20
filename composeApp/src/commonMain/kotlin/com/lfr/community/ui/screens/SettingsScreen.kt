@@ -52,7 +52,7 @@ fun SettingsScreen(repository: CommunityRepository, navController: NavController
                     try {
                         repository.logout()
                         navController.navigate(Screen.Login.route) {
-                            popUpTo(0) { inclusive = true }
+                            popUpTo(navController.graph.id) { inclusive = true }
                         }
                     } catch (_: Exception) {
                         // 退出失败时保持登录状态
