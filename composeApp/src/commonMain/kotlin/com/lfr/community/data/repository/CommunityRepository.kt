@@ -13,6 +13,10 @@ class CommunityRepository(
     var isUsingMock = false
         private set
 
+    fun setMockMode(enabled: Boolean) {
+        isUsingMock = enabled
+    }
+
     // === Members ===
 
     suspend fun getMembers(): List<Member> = try {

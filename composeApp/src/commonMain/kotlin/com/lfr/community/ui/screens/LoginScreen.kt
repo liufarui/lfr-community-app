@@ -111,7 +111,7 @@ fun LoginScreen(repository: CommunityRepository, onLoginSuccess: () -> Unit) {
 
         TextButton(
             onClick = {
-                // 临时跳过登录，直接进入主页（开发用）
+                repository.setMockMode(true)
                 onLoginSuccess()
             }
         ) {

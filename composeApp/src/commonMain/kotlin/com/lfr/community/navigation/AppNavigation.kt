@@ -9,7 +9,6 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.*
 import com.lfr.community.data.repository.CommunityRepository
 import com.lfr.community.ui.screens.*
-import kotlinx.coroutines.launch
 
 enum class Screen(val route: String, val label: String, val icon: String) {
     Login("login", "登录", "🔐"),
@@ -23,14 +22,11 @@ enum class Screen(val route: String, val label: String, val icon: String) {
 fun AppNavigation(repository: CommunityRepository) {
     val navController = rememberNavController()
     val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
-    val scope = rememberCoroutineScope()
 
     var isLoggedIn by remember { mutableStateOf<Boolean?>(null) }
 
     LaunchedEffect(Unit) {
-        scope.launch {
-            isLoggedIn = repository.isLoggedIn()
-        }
+        isLoggedIn = repository.isLoggedIn()
     }
 
     if (isLoggedIn == null) {
