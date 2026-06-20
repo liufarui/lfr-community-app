@@ -15,17 +15,18 @@ import androidx.compose.ui.unit.dp
 import com.lfr.community.data.model.Member
 import com.lfr.community.data.repository.CommunityRepository
 import com.lfr.community.ui.components.MockDataBanner
-import kotlinx.coroutines.launch
 
 @Composable
 fun MembersScreen(repository: CommunityRepository) {
     var members by remember { mutableStateOf<List<Member>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
-    val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
-        scope.launch {
+        try {
             members = repository.getMembers()
+        } catch (_: Exception) {
+            // Repository 已处理异常
+        } finally {
             loading = false
         }
     }
