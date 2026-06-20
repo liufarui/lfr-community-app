@@ -51,7 +51,7 @@ fun SettingsScreen(repository: CommunityRepository, navController: NavController
                     loggingOut = true
                     repository.logout()
                     navController.navigate(Screen.Login.route) {
-                        popUpTo(Screen.Feed.route) { inclusive = true }
+                        popUpTo(0) { inclusive = true }
                     }
                 }
             },
