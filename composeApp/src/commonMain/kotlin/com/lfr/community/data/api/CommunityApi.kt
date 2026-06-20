@@ -39,9 +39,13 @@ class CommunityApi(
                     tokenStore.load()?.let { BearerTokens(it, "") }
                 }
                 refreshTokens {
-                    // TODO: 后端 refresh 接口就绪后实现；当前 token 失效需重新 login
-                    println("[CommunityApi] warn: refreshTokens 未实现，token 已失效")
-                    throw NotImplementedError("refreshToken 后端暂未实现，需重新 login")
+                    try {
+                        val response = auth.refreshToken()
+                        BearerTokens(response.token, "")
+                    } catch (e: Exception) {
+                        println("[CommunityApi] warn: refreshTokens failed: ${e.message}")
+                        throw e
+                    }
                 }
                 sendWithoutRequest { true }
             }
@@ -57,14 +61,10 @@ class CommunityApi(
     val agents = AgentsApi(client)
     val threads = ThreadsApi(client)
 
-    fun updateBaseUrl(url: String) {
-        apiBase = url.trimEnd('/')
-    }
-
     suspend fun fetchMembers(): List<Member> =
         client.get("/api/members-parsed").body()
 
-    suspend fun fetchMessages(limit: Int = 50, offset: Int = 0): List<Message> = try {
+    suspend fun fetchMessages(limit: Int = 50, offset: Int = 0): List<Message> {
         val dateDirs: List<String> = client.get("/api/data/messages").body()
         val sorted = dateDirs.filter { it.matches(Regex("\\d{4}-\\d{2}-\\d{2}")) }.sortedDescending()
         val messages = mutableListOf<Message>()
@@ -82,10 +82,7 @@ class CommunityApi(
                 println("[CommunityApi] error: fetchMessages failed on $dateDir: ${e.message}")
             }
         }
-        messages.sortedByDescending { it.time }.drop(offset).take(limit)
-    } catch (e: Exception) {
-        println("[CommunityApi] error: fetchMessages failed: ${e.message}")
-        emptyList()
+        return messages.sortedByDescending { it.time }.drop(offset).take(limit)
     }
 
     suspend fun fetchGroupChats(): List<GroupChat> =

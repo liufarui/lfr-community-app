@@ -13,8 +13,6 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun SettingsScreen(repository: CommunityRepository, navController: NavController) {
-    var apiUrl by remember { mutableStateOf("https://liufarui.top/community-api") }
-    var saved by remember { mutableStateOf(false) }
     var loggingOut by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
@@ -25,23 +23,6 @@ fun SettingsScreen(repository: CommunityRepository, navController: NavController
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text("设置", style = MaterialTheme.typography.headlineSmall)
-
-        OutlinedTextField(
-            value = apiUrl,
-            onValueChange = { apiUrl = it; saved = false },
-            label = { Text("API 地址") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-        )
-
-        Button(
-            onClick = {
-                repository.updateApiBase(apiUrl.trim())
-                saved = true
-            }
-        ) {
-            Text(if (saved) "已保存 ✓" else "保存")
-        }
 
         HorizontalDivider()
 

@@ -68,8 +68,8 @@ class CommunityRepository(
 
     // === Auth ===
 
-    suspend fun login(username: String, password: String): Boolean =
-        try { api.auth.login(username, password); true } catch (_: Exception) { false }
+    suspend fun login(username: String, password: String): Result<Boolean> =
+        api.auth.login(username, password).map { true }
 
     suspend fun logout() = api.auth.logout()
 
@@ -116,8 +116,4 @@ class CommunityRepository(
 
     suspend fun postThreadMessage(threadId: String, content: String): Boolean =
         try { api.threads.post(threadId, content); true } catch (_: Exception) { false }
-
-    // === Config ===
-
-    fun updateApiBase(url: String) { api.updateBaseUrl(url) }
 }

@@ -86,14 +86,11 @@ fun LoginScreen(repository: CommunityRepository, onLoginSuccess: () -> Unit) {
                     loading = true
                     error = null
                     try {
-                        val success = repository.login(username, password)
-                        if (success) {
-                            onLoginSuccess()
-                        } else {
-                            error = "登录失败，请检查用户名和密码"
-                        }
-                    } catch (_: Exception) {
-                        error = "登录失败，请重试"
+                        val result = repository.login(username, password)
+                        result.fold(
+                            onSuccess = { onLoginSuccess() },
+                            onFailure = { e -> error = "登录失败：${e.message ?: "请检查用户名和密码"}" }
+                        )
                     } finally {
                         loading = false
                     }
