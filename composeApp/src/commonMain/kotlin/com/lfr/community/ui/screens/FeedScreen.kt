@@ -31,15 +31,18 @@ fun FeedScreen(repository: CommunityRepository) {
 
     fun loadData(isRefresh: Boolean = false) {
         scope.launch {
-            if (isRefresh) {
-                refreshing = true
-                messages = repository.getMessages(pageSize)
-                members = repository.getMembers().associateBy { it.id }
-                refreshing = false
-            } else if (loading) {
-                messages = repository.getMessages(pageSize)
-                members = repository.getMembers().associateBy { it.id }
+            try {
+                if (isRefresh) {
+                    refreshing = true
+                    messages = repository.getMessages(pageSize)
+                    members = repository.getMembers().associateBy { it.id }
+                } else if (loading) {
+                    messages = repository.getMessages(pageSize)
+                    members = repository.getMembers().associateBy { it.id }
+                }
+            } finally {
                 loading = false
+                refreshing = false
             }
         }
     }
@@ -58,9 +61,16 @@ fun FeedScreen(repository: CommunityRepository) {
     LaunchedEffect(shouldLoadMore) {
         if (shouldLoadMore && messages.isNotEmpty()) {
             loadingMore = true
-            val moreMessages = repository.getMessages(messages.size + pageSize)
-            messages = moreMessages
-            loadingMore = false
+            try {
+                val moreMessages = repository.getMessages(messages.size + pageSize)
+                // 增量加载：只追加新消息，避免重复
+                val newMessages = moreMessages.filter { newMsg -> messages.none { it.id == newMsg.id } }
+                if (newMessages.isNotEmpty()) {
+                    messages = messages + newMessages
+                }
+            } finally {
+                loadingMore = false
+            }
         }
     }
 
