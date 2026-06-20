@@ -85,12 +85,17 @@ fun LoginScreen(repository: CommunityRepository, onLoginSuccess: () -> Unit) {
                 scope.launch {
                     loading = true
                     error = null
-                    val success = repository.login(username, password)
-                    loading = false
-                    if (success) {
-                        onLoginSuccess()
-                    } else {
-                        error = "登录失败，请检查用户名和密码"
+                    try {
+                        val success = repository.login(username, password)
+                        if (success) {
+                            onLoginSuccess()
+                        } else {
+                            error = "登录失败，请检查用户名和密码"
+                        }
+                    } catch (_: Exception) {
+                        error = "登录失败，请重试"
+                    } finally {
+                        loading = false
                     }
                 }
             },

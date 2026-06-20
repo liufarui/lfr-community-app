@@ -49,9 +49,15 @@ fun SettingsScreen(repository: CommunityRepository, navController: NavController
             onClick = {
                 scope.launch {
                     loggingOut = true
-                    repository.logout()
-                    navController.navigate(Screen.Login.route) {
-                        popUpTo(0) { inclusive = true }
+                    try {
+                        repository.logout()
+                        navController.navigate(Screen.Login.route) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    } catch (_: Exception) {
+                        // 退出失败时保持登录状态
+                    } finally {
+                        loggingOut = false
                     }
                 }
             },
