@@ -62,23 +62,23 @@ class CommunityApi(
     suspend fun fetchMembers(): List<Member> =
         client.get("/api/members-parsed").body()
 
-    suspend fun fetchMessages(limit: Int = 50): List<Message> {
+    suspend fun fetchMessages(limit: Int = 50, offset: Int = 0): List<Message> {
         val dateDirs: List<String> = client.get("/api/data/messages").body()
         val sorted = dateDirs.filter { it.matches(Regex("\\d{4}-\\d{2}-\\d{2}")) }.sortedDescending()
         val messages = mutableListOf<Message>()
         for (dateDir in sorted) {
-            if (messages.size >= limit) break
+            if (messages.size >= offset + limit) break
             try {
                 val files: List<String> = client.get("/api/data/messages/$dateDir").body()
                 val jsonlFiles = files.filter { it.endsWith(".jsonl") }.sortedDescending()
                 for (f in jsonlFiles) {
                     val batch: List<Message> = client.get("/api/data/messages/$dateDir/$f").body()
                     messages.addAll(batch)
-                    if (messages.size >= limit) break
+                    if (messages.size >= offset + limit) break
                 }
             } catch (_: Exception) {}
         }
-        return messages.sortedByDescending { it.time }.take(limit)
+        return messages.sortedByDescending { it.time }.drop(offset).take(limit)
     }
 
     suspend fun fetchGroupChats(): List<GroupChat> =

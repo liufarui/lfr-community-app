@@ -28,11 +28,11 @@ class CommunityRepository(
 
     // === Feed Messages ===
 
-    suspend fun getMessages(limit: Int = 50): List<Message> = try {
-        api.fetchMessages(limit).also { isUsingMock = false }
+    suspend fun getMessages(limit: Int = 50, offset: Int = 0): List<Message> = try {
+        api.fetchMessages(limit, offset).also { isUsingMock = false }
     } catch (_: Exception) {
         isUsingMock = true
-        MockCommunityApi.messages.take(limit)
+        MockCommunityApi.messages.drop(offset).take(limit)
     }
 
     // === Group Chats ===

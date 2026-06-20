@@ -9,6 +9,7 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.lfr.community.data.model.Member
 import com.lfr.community.data.model.Message
@@ -25,6 +26,7 @@ fun FeedScreen(repository: CommunityRepository) {
     var loading by remember { mutableStateOf(true) }
     var refreshing by remember { mutableStateOf(false) }
     var loadingMore by remember { mutableStateOf(false) }
+    var hasMore by remember { mutableStateOf(true) }
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
     val pageSize = 50
@@ -34,12 +36,15 @@ fun FeedScreen(repository: CommunityRepository) {
             try {
                 if (isRefresh) {
                     refreshing = true
-                    messages = repository.getMessages(pageSize)
-                    members = repository.getMembers().associateBy { it.id }
-                } else if (loading) {
-                    messages = repository.getMessages(pageSize)
-                    members = repository.getMembers().associateBy { it.id }
+                } else {
+                    loading = true
                 }
+                val newMessages = repository.getMessages(limit = pageSize, offset = 0)
+                members = repository.getMembers().associateBy { it.id }
+                messages = newMessages
+                hasMore = newMessages.size >= pageSize
+            } catch (_: Exception) {
+                // Repository 已处理异常，这里只确保状态重置
             } finally {
                 loading = false
                 refreshing = false
@@ -54,20 +59,25 @@ fun FeedScreen(repository: CommunityRepository) {
     val shouldLoadMore by remember {
         derivedStateOf {
             val lastVisibleItem = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-            lastVisibleItem >= messages.size - 5 && !loadingMore && !refreshing
+            lastVisibleItem >= messages.size - 5 && !loadingMore && !refreshing && hasMore
         }
     }
 
     LaunchedEffect(shouldLoadMore) {
         if (shouldLoadMore && messages.isNotEmpty()) {
-            loadingMore = true
             try {
-                val moreMessages = repository.getMessages(messages.size + pageSize)
-                // 增量加载：只追加新消息，避免重复
-                val newMessages = moreMessages.filter { newMsg -> messages.none { it.id == newMsg.id } }
-                if (newMessages.isNotEmpty()) {
+                loadingMore = true
+                val moreMessages = repository.getMessages(limit = pageSize, offset = messages.size)
+                if (moreMessages.isNotEmpty()) {
+                    val existingIds = messages.map { it.id }.toSet()
+                    val newMessages = moreMessages.filter { it.id !in existingIds }
                     messages = messages + newMessages
+                    hasMore = newMessages.isNotEmpty() && moreMessages.size >= pageSize
+                } else {
+                    hasMore = false
                 }
+            } catch (_: Exception) {
+                // 加载失败时保持 hasMore 为 true，允许重试
             } finally {
                 loadingMore = false
             }
@@ -108,6 +118,16 @@ fun FeedScreen(repository: CommunityRepository) {
                             Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
                                 CircularProgressIndicator(modifier = Modifier.size(24.dp))
                             }
+                        }
+                    } else if (!hasMore && messages.isNotEmpty()) {
+                        item {
+                            Text(
+                                "没有更多了",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                                textAlign = TextAlign.Center
+                            )
                         }
                     }
                 }
